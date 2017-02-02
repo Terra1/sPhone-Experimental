@@ -1,0 +1,126 @@
+local config = require("config")
+
+function install(file)
+	if string.getExtension(file) == "spk" then
+		if fs.exists(file) and not fs.isDir(file) then
+			local f = fs.open(file,"r")
+			local script = f.readAll()
+			f.close()
+			script = textutils.unserialize(script)
+			if not script then
+				error("spk corrupted",2)
+			end
+		
+			local function writeFile(patha,contenta)
+				local file = fs.open(patha,"w")
+				file.write(contenta)
+				file.close()
+			end
+			function writeDown(inputa,dira)
+				for i,v in pairs(inputa) do
+					if type(v) == "table" then
+						writeDown(v,dira.."/"..i)
+					elseif type(v) == "string" then
+						writeFile(dira.."/"..i,v)
+					end
+				end
+			end
+			
+			local _config = textutils.unserialize(script.config)
+			if not _config.id then
+				return false
+			end
+			if not _config.main then
+				return false
+			end
+			writeDown(textutils.unserialize(script.files),"/.sPhone/apps/".._config.id.."/files")
+			local f = fs.open("/.sPhone/apps/".._config.id.."/.spk","w")
+			f.write(textutils.serialize(_config))
+			f.close()
+			
+			if not _config.name then
+				_config.name = _config.id
+			end
+			
+			config.set("installedSPKs",_config.id,_config.name)
+			return true, _config.id
+		else
+			return false, "not a spk file"
+		end
+	else
+		return false, "not a spk file"
+	end
+end
+	
+function launch(file)
+		
+		if not config.get("installedSPKs",file) then
+			return false, "not installed"
+		end
+		
+		if not fs.exists("/.sPhone/apps/"..file.."/.spk") then
+			return false, "Invalid SPK, .spk not found"
+		end
+		
+		local f = fs.open("/.sPhone/apps/"..file.."/.spk","r")
+		local script = f.readAll()
+		f.close()
+		_config = textutils.unserialize(script)
+		if not script then
+			return false, "config corrupted"
+		end
+		--proc.launch(function()
+			--parallel.waitForAll(function()
+				local ok, err = pcall(function()
+					setfenv(loadfile(fs.combine("/.sPhone/apps/",_config.id.."/files/".._config.main)), setmetatable({
+					spk = {
+						getName = function()
+								return (_config.name or nil)
+							end,
+							
+							getID = function()
+								return (_config.id or nil)
+							end,
+							
+							getPath = function()
+								return "/.sPhone/apps/".._config.id
+							end,
+							
+							getDataPath = function()
+								return "/.sPhone/apps/".._config.id.."/data"
+							end,
+							
+							getAuthor = function()
+								return (_config.author or nil)
+							end,
+							
+							getVersion = function()
+								return (_config.version or nil)
+							end,
+							
+							getType = function()
+								return (_config.type or nil)
+							end,
+							
+							open = function(file, mode)
+								return fs.open("/.sPhone/apps/".._config.id.."/data/"..file,mode)
+							end,
+							
+							launch = launch,
+							install = install,
+						},
+						string = string,
+						sPhone = sPhone,
+						require = require,
+					}, {__index = getfenv()}))()
+				end)
+			--end, function()
+				--while true do
+					--local _,c = os.pullEvent("key")
+					--if c == keys.f12 then
+						--break
+					--end
+				--end
+			--end)
+	--end,_config.id)
+end

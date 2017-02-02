@@ -1,0 +1,16 @@
+{
+  database = {
+    version = 2.2,
+  },
+  os = {
+    setup = false,
+  },
+  account = {
+    password = "4af6fb3226d74121627f42707eb5a0bf98e5c891afe4a1107adad3061880f7b7",
+    username = "Ale32bit",
+  },
+  installedSPKs = {
+	[ "sphone.examplespk" ] = "SPK Example",
+	[ "sphone.shell" ] = "Shell",
+  },
+}

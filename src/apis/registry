@@ -1,0 +1,29 @@
+local registry = {}
+local confFile = "/.sPhone/config/registry"
+
+local function split(inputstr)
+        local t={} ; i=1
+        for str in string.gmatch(inputstr, "([^/]+)") do
+                t[i] = str
+                i = i + 1
+        end
+        return t
+end
+
+if not fs.exists(confFile) then
+	local f = fs.open(confFile,"w")
+	f.write(textutils.serialize(registry))
+	f.close()
+end
+
+local f = fs.open(confFile,"r")
+registry = textutils.unserialize(f.readAll())
+f.close()
+
+function set(config,value)
+	
+end
+
+function get(config)
+	return registry
+end

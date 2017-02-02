@@ -1,0 +1,5 @@
+print("---- TASK LIST ----")
+for k,v in ipairs(proc.getInfo()) do
+	print(k..": "..v)
+end
+print("-------------------")

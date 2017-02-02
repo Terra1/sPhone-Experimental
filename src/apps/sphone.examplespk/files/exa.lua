@@ -1,0 +1,8 @@
+print("This is an example file")
+print(spk.getID())
+print(spk.getPath())
+print(spk.getName())
+print(spk.getAuthor())
+print(spk.getVersion())
+print("Press any key")
+os.pullEvent("key")

@@ -1,0 +1,279 @@
+local theme = require("theme")
+
+function clear(clean)
+	if clean then
+		term.setBackgroundColor(colors.black)
+		term.clear()
+		term.setCursorPos(1,1)
+		term.setTextColor(colors.white)
+	else
+		term.setBackgroundColor(theme.get("background"))
+		term.clear()
+		term.setCursorPos(1,1)
+		term.setTextColor(theme.get("text"))
+	end
+end
+
+function list(path, opt)
+	opt = opt or {}
+	opt.bg1 = opt.bg1 or theme.get("background")
+	opt.fg1 = opt.fg1 or theme.get("text")
+	opt.fg1b = opt.fg1b or colors.lime
+	opt.bg2 = opt.bg2 or theme.get("header")
+	opt.fg2 = opt.fg2 or theme.get("headerText")
+	opt.bg3 = opt.bg3 or colors.red
+	opt.fg3 = opt.fg3 or theme.get("headerText")
+	opt.output = opt.output or true
+	opt.list = opt.list or false
+	opt.pairs = opt.pairs or false
+	opt.title = opt.title or false
+	if not path then
+		path = ""
+	end
+	if not fs.isDir(path) and not opt.list then
+		error("Invalid path")
+	end
+	local scroll = 0
+	local items
+	local cho = {}
+	local w, h
+	local function rebuild()
+		local files, dirs = {}, {}
+		items = {}
+		local flist
+		if not opt.list then
+			flist = fs.list(path)
+		else
+			flist = opt.list
+		end
+			
+		local function pair(tab)
+			if opt.pairs then
+				return pairs(tab)
+			end
+			return ipairs(tab)
+		end
+			
+		for i, v in pair(flist) do
+			if fs.isDir(fs.combine(path, v)) then
+				table.insert(dirs, v)
+			else
+				table.insert(files, v)
+			end
+		end
+		table.sort(files)
+		table.sort(dirs)
+		for i, v in pair(dirs) do
+			table.insert(items, v)
+		end
+		for i, v in pair(files) do
+			table.insert(items, v)
+		end
+			
+		if opt.pairs then
+			for k, v in pairs(flist) do
+				cho[v] = k
+			end
+		end
+		scroll = 0
+	end
+	rebuild()
+	local setVisible = term.current().setVisible
+		or function()end
+	local function redraw()
+		w, h = term.getSize()
+		setVisible(false)
+		term.setBackgroundColor(opt.bg1)
+		term.clear()
+		for i = scroll + 1, h + scroll - 1 do
+			local str = items[i]
+			if str then
+				term.setCursorPos(2, 1 + i - scroll)
+				local isDir
+				 if not opt.pairs then
+					isDir = fs.isDir(fs.combine(path, str))
+				 else
+					 isDir = false
+				 end
+				term.setTextColor(isDir and opt.fg1b or opt.fg1)
+				local _w = w - (isDir and 2 or 1)
+				if #str > _w then
+					str = str:sub(1, _w - 2) .. ".."
+				end
+				if isDir then
+					str = str .. "/"
+				end
+				term.write(str)
+			end
+		end
+		term.setBackgroundColor(opt.bg2)
+		term.setTextColor(opt.fg2)
+		term.setCursorPos(1, 1)
+		term.clearLine()
+		local _path = path .. "/"
+		if #_path > w - 2 then
+			_path = ".." .. _path:sub(-w + 4)
+		end
+		if opt.title then
+			_path = opt.title
+		end
+		term.write(_path)
+		term.setBackgroundColor(opt.bg3)
+		term.setTextColor(opt.fg3)
+		term.setCursorPos(w, 1)
+		term.write("X")
+		term.setBackgroundColor(opt.bg2)
+		term.setCursorPos(w, 2)
+		term.write("^")
+		term.setCursorPos(w, h)
+		term.write("v")
+		setVisible(true)
+	end
+	while true do
+		redraw()
+		local ev = {os.pullEventRaw()}
+		if ev[1] == "terminate" then
+			return nil
+		elseif ev[1] == "mouse_scroll" and ev[4] > 1 then
+			scroll = scroll + ev[2]
+		elseif ev[1] == "mouse_click" then
+			if ev[3] == w and ev[2] == 1 then
+				if ev[4] == 1 then
+					return nil
+				elseif ev[4] == 2 then
+					scroll = scroll - 1
+				elseif ev[4] == h then
+					scroll = scroll + 1
+				end
+			elseif ev[3] < w and ev[4] == 1 and ev[2] == 1 then
+				path = fs.getDir(path)
+				if path == ".." then
+					path = ""
+				end
+				rebuild()
+			elseif ev[3] < w and ev[4] > 1 then
+				local item = items[ev[4] + scroll - 1]
+				if item then
+					local fullPath = fs.combine(path, item)
+					if fs.isDir(fullPath) then
+						path = fullPath
+						rebuild()
+					else
+						if opt.output then
+							if opt.pairs then
+								return cho[fullPath], fullPath, ev[2]
+							end
+							return fullPath, ev[2]
+						end
+					end
+				end
+			end
+		end
+		scroll = math.min(math.max(0, scroll), math.max(0, #items - h + 1))
+	end
+end
+
+function header(title, butt, big)
+	
+	if not title then
+		title = "sPhone"
+	end
+	local w, h = term.getSize()
+	if big then
+		paintutils.drawFilledBox(1,1,w,3, theme.get("header"))
+		term.setTextColor(theme.get("headerText"))
+		term.setCursorPos(2,2)
+		term.write(title)
+	else
+		paintutils.drawLine(1,1,w,1, theme.get("header"))
+		term.setTextColor(theme.get("headerText"))
+		term.setCursorPos(2,1)
+		term.write(title)
+	end
+	term.setBackgroundColor(colors.red)
+	term.setCursorPos(w,1)
+	if butt and type(butt) == "string" then
+		write(butt:sub(1,1))
+	end
+	term.setBackgroundColor(theme.get("background"))
+	term.setTextColor(theme.get("text"))
+	if big then
+		term.setCursorPos(1,5)
+	else
+		term.setCursorPos(1,3)
+	end
+ end
+ 
+function menu(items, title, button)
+	local w,h = term.getSize()
+	if not title then
+		title = ""
+	end
+	
+	 local function redraw()
+		term.setBackgroundColor(theme.get("background"))
+		term.clear()
+		header(title,button)
+		term.setCursorPos(1,3)
+		term.setTextColor(theme.get("text"))
+		for k,v in ipairs(items) do
+			term.clearLine()
+			print(" "..v)
+		end
+	 end
+	
+	while true do
+		redraw()
+		local _,m,x,y = os.pullEvent("mouse_click")
+		if y == 1 and x == w then
+			if button then
+				return nil,0
+			end
+		else
+			if items[y-2] then
+				return items[y-2], y-2
+			end
+		end
+	end
+end
+
+function colorPicker(message, old) -- From Impulse
+		local current = math.log(old) / math.log(2)
+		-- first line is already code wizardry
+		local function redraw()
+			term.setBackgroundColour(theme.get("background"))
+			term.clear()
+			header(message)
+			term.setCursorPos(2,5)
+			term.setTextColor(colors.white)
+			term.setBackgroundColor(colors.lime)
+			write(" Ok ")
+			term.setCursorPos(7,5)
+			term.setTextColor(colors.white)
+			term.setBackgroundColor(colors.red)
+			write(" Cancel ")
+			term.setTextColor(colors.black)
+			term.setCursorPos(2, 3)
+			for i = 0, 15 do
+				term.setBackgroundColour(2^i)
+				term.write(i == current and "#" or ":")
+			end
+		end
+		while true do
+			redraw()
+			local ev = {os.pullEvent()}
+			if ev[1] == "key" and ev[2] == keys.enter then
+				return 2^current
+			elseif ev[1] == "mouse_click" then
+				if ev[4] == 3 and ev[3] >= 2 and ev[3] <= 17 then
+					current = ev[3] - 2 % 16
+				elseif ev[4] == 5 and ev[3] >= 2 and ev[3] <= 6 then
+					return 2^current
+				elseif ev[4] == 5 and ev[3] >= 7 and ev[3] <= 14 then
+					return old
+				end
+			end
+		end
+	end
+	
+colourPicker = colorPicker -- For UK

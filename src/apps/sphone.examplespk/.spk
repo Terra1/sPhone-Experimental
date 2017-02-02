@@ -1,0 +1,8 @@
+{
+  main = "exa.lua",
+  type = "app",
+  name = "SPK Example",
+  id = "sphone.examplespk",
+  version = 1.3,
+  author = "BeaconNet",
+}

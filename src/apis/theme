@@ -1,0 +1,30 @@
+local config = require("config")
+
+local defaultT = {
+  [ "lock.background" ] = 1,
+  [ "lock.error" ] = 16384,
+  [ "lock.inputText" ] = 32768,
+  [ "window.side" ] = 2048,
+  text = 32768,
+  [ "window.text" ] = 1,
+  headerText = 1,
+  header = 2048,
+  [ "lock.text" ] = 32768,
+  [ "lock.inputBackground" ] = 1,
+  [ "lock.inputSide" ] = 8,
+  [ "window.button" ] = 8,
+  [ "window.background" ] = 8,
+  background = 1,
+}
+
+function get(opt)
+	return (config.get("theme",opt) or defaultT[opt])
+end
+
+function set(opt,value)
+	config.get("theme",opt,(value or defaultT[opt]))
+end
+
+function default(opt)
+	return defaultT[opt]
+end
